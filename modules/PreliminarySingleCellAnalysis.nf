@@ -115,6 +115,7 @@ process RUN_SC_ANALYSIS {
     path "*.txt", emit: marker_tables
     path "qc_metrics.tsv", emit: qc_metrics
     path "*.csv", optional: true, emit: annotation_files
+    path "*.requests.json", optional: true, emit: annotation_requests
   
   script:
     """
@@ -139,50 +140,97 @@ process RUN_SC_ANALYSIS {
 }
 
 /*
- * Generate an optional single-cell QC report using an LLM API
+ * Extract run-specific metrics from the aligned, post-filter cell cohort.
+ * FASTQ read-group counts are explicitly distinguished from optional BAM summaries.
  */
+def qcQuote(value) {
+  return "'" + value.toString().replace("'", "'\"'\"'") + "'"
+}
+
+process EXTRACT_SC_QC {
+  label 'sclong'
+  tag "filtered_cell_qc"
+
+  input:
+    path seurat_gene
+    path seurat_tr
+    path isoquant_dir
+    path read_groups
+    path reference_gtf
+    path read_summary
+    path classification
+    path pipeline_bin
+
+  output:
+    path "qc_data", emit: qc_data
+
+  script:
+    def summaryArg = read_summary ? "--read_summary ${qcQuote(read_summary)}" : "--read_groups ${qcQuote(read_groups)}"
+    def classificationArg = classification ? "--classification ${qcQuote(classification)}" : ''
+    def projectArg = qcQuote(params.qc_project ?: 'scLRA-LLM')
+    def sourceArg = qcQuote(params.qc_read_source ?: 'auto')
+    """
+    "${params.rscript_bin ?: 'Rscript'}" "${pipeline_bin}/qc/extract_qc_metrics.R" \
+      --gene "${seurat_gene}" --transcript "${seurat_tr}" \
+      --isoquant_dir "${isoquant_dir}" --reference_gtf "${reference_gtf}" \
+      --output_dir qc_data ${classificationArg}
+    python3 "${pipeline_bin}/qc/prepare_qc_report.py" \
+      --data_dir qc_data ${summaryArg} --project ${projectArg} \
+      --isoquant_dir "${isoquant_dir}" --read_source ${sourceArg}
+    "${params.rscript_bin ?: 'Rscript'}" "${pipeline_bin}/qc/plot_qc.R" \
+      qc_data/cells.tsv.gz qc_data/qc_distributions.svg
+    """
+}
+
+/* Only aggregate metrics and definitions are sent to the configured provider. */
 process LLM_SC_QC_REPORT {
   label 'preprocess'
   tag "llm_sc_qc_report"
-  
-  // Keep the historical directory name so existing result consumers do not break.
-  publishDir "${params.outdir ?: 'Result'}/PreliminarySingleCellAnalysis/deepseek_qc", mode: 'copy'
-  
+
+  // Retain the historical text-report path for existing consumers.
+  publishDir "${params.outdir ?: 'Result'}/PreliminarySingleCellAnalysis/deepseek_qc", mode: 'copy',
+    pattern: 'sc_qc_report.txt'
+
   input:
-    path qc_metrics
+    path qc_data
     path pipeline_bin
-  
+
   output:
+    path "qc_interpretation", emit: interpretation
     path "sc_qc_report.txt", emit: sc_qc_report
 
-  when:
-    params.llm_enabled
-  
   script:
+    def strictArg = params.qc_llm_strict ? '--strict' : ''
+    def baseUrlArg = qcQuote(params.llm_base_url)
+    def modelArg = qcQuote(params.llm_model)
     """
-    # Check if qc_metrics file exists
-    if [[ ! -f "${qc_metrics}" ]]; then
-      echo "ERROR: QC metrics file not found: ${qc_metrics}" >&2
-      exit 1
-    fi
-    
-    # Run Python script to generate QC report
-    python "${pipeline_bin}/llm/cell_qc.py" \
-      --csv_file_path "${qc_metrics}" \
-      --output_text_file "sc_qc_report.txt" \
-      --species "${params.species ?: 'Human'}" \
-      --tissue "${params.tissue ?: 'Skin'}" \
-      --base_url "${params.llm_base_url}" \
-      --model "${params.llm_model}"
-    
-    # Check if report was generated
-    if [[ ! -s "sc_qc_report.txt" ]]; then
-      echo "WARNING: Single-cell QC report is empty" >&2
-    else
-      echo "Single-cell QC report generated successfully"
-      echo "Report preview:"
-      head -50 sc_qc_report.txt
-    fi
+    python3 "${pipeline_bin}/qc/interpret_qc.py" \
+      --data "${qc_data}/qc_report.json" --output_dir qc_interpretation \
+      --base_url ${baseUrlArg} --model ${modelArg} ${strictArg}
+    cp qc_interpretation/sc_qc_report.txt sc_qc_report.txt
+    """
+}
+
+/* The portable English HTML is generated with or without an API key. */
+process RENDER_SC_QC_REPORT {
+  label 'preprocess'
+  tag "render_sc_qc_report"
+
+  publishDir "${params.outdir ?: 'Result'}/PreliminarySingleCellAnalysis", mode: 'copy'
+
+  input:
+    path qc_data
+    path interpretation
+    path pipeline_bin
+
+  output:
+    path "qc_report", emit: report_dir
+
+  script:
+    def interpretedArg = interpretation ? "--interpreted ${qcQuote(interpretation.toString() + '/qc_report.json')}" : ''
+    """
+    python3 "${pipeline_bin}/qc/publish_qc_report.py" \
+      --data_dir "${qc_data}" ${interpretedArg} --output_dir qc_report
     """
 }
 
@@ -192,6 +240,8 @@ process LLM_SC_QC_REPORT {
 workflow PreliminarySingleCellAnalysis {
   take:
     isoquant_dir
+    read_groups
+    reference_gtf
   
   main:
     pipeline_bin = file("${projectDir}/bin", checkIfExists: true)
@@ -207,8 +257,30 @@ workflow PreliminarySingleCellAnalysis {
       pipeline_bin
     )
     
-    // Generate QC report (optional, requires API key)
-    qc_report = LLM_SC_QC_REPORT(sc_results.qc_metrics, pipeline_bin)
+    report_dirs = channel.empty()
+    report_html = channel.empty()
+    report_tsv = channel.empty()
+    report_json = channel.empty()
+    report_text = channel.empty()
+    llm_report_text = channel.empty()
+    if (params.qc_report_enabled) {
+      read_summary = params.qc_read_summary ? file(params.qc_read_summary, checkIfExists: true) : []
+      classification = params.qc_classification ? file(params.qc_classification, checkIfExists: true) : []
+      qc_data = EXTRACT_SC_QC(sc_results.seurat_gene, sc_results.seurat_tr,
+        isoquant_dir, read_groups, reference_gtf, read_summary, classification, pipeline_bin)
+      interpretation = []
+      if (params.llm_enabled) {
+        interpreted = LLM_SC_QC_REPORT(qc_data.qc_data, pipeline_bin)
+        interpretation = interpreted.interpretation
+        llm_report_text = interpreted.sc_qc_report
+      }
+      rendered = RENDER_SC_QC_REPORT(qc_data.qc_data, interpretation, pipeline_bin)
+      report_dirs = rendered.report_dir
+      report_html = report_dirs.map { dir -> dir.resolve('scLRA_LLM_QC_report.html') }
+      report_tsv = report_dirs.map { dir -> dir.resolve('scLRA_LLM_QC_report.tsv') }
+      report_json = report_dirs.map { dir -> dir.resolve('data/qc_report.json') }
+      report_text = report_dirs.map { dir -> dir.resolve('sc_qc_report.txt') }
+    }
   
   emit:
     seurat_gene = sc_results.seurat_gene     // sce.gene.rds
@@ -217,7 +289,11 @@ workflow PreliminarySingleCellAnalysis {
     marker_tables = sc_results.marker_tables
     qc_metrics = sc_results.qc_metrics
     annotation_files = sc_results.annotation_files  // optional
-    llm_qc_report = qc_report.sc_qc_report
-    // Backward-compatible output name.
-    sc_qc_report = qc_report.sc_qc_report
+    qc_report_dir = report_dirs
+    qc_report_html = report_html
+    qc_report_tsv = report_tsv
+    qc_report_json = report_json
+    llm_qc_report = llm_report_text
+    // Backward-compatible text output, also available without an LLM.
+    sc_qc_report = report_text
 }

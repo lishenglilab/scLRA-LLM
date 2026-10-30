@@ -35,10 +35,10 @@ def main():
             sid = (row.get("sample_id") or "").strip()
             fq = (row.get("fastq") or "").strip()
             if sid and fq:
-                if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", sid):
+                if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]*", sid):
                     raise SystemExit(
                         f"Invalid sample_id on line {line_number}: {sid!r}. "
-                        "Use only letters, numbers, '.', '_' and '-'."
+                        "Use only letters, numbers, '.' and '-'; '_' separates sample and barcode."
                     )
                 rows.append((sid, fq))
 

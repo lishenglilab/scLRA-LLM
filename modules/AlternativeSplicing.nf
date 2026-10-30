@@ -17,6 +17,8 @@ process SPLIT_EXPRESSION {
   output:
     path "split_files/*.txt", emit: split_files 
     path "split_info.txt", emit: split_info
+    path "split_files/input_provenance.json", emit: input_provenance
+    path "split_files/cell_libraries.tsv", emit: cell_libraries
   
   script:
     """
@@ -119,84 +121,52 @@ process CALCULATE_PSI {
     """
 }
 
-process MERGE_AS_RESULTS {  
-  label 'sclong'  // 确保使用包含 R 和 data.table 的环境
+process MERGE_AS_RESULTS {
+  label 'sclong'
   tag "merge_psi"
-  
   publishDir "${params.outdir ?: 'Result'}/AlternativeSplicing", mode: 'copy'
-  
+
   input:
     path psi_files
-  
+    path pipeline_bin
+
   output:
     path "merged_project_events.psi", emit: merged_psi
-  
+    path "undefined_psi_by_sample.tsv", emit: missing_counts
+
   script:
     """
-    "${params.rscript_bin ?: 'Rscript'}" --vanilla - << 'RSCRIPT'
-    
+    "${params.rscript_bin ?: 'Rscript'}" "${pipeline_bin}/AlternativeSplicing/merge_psi.R" *.psi
+    """
+}
 
-    library(data.table)
-    files <- list.files(pattern = "\\\\.psi\$")
-    files <- sort(files) 
-    
-    if (length(files) == 0) {
-        stop("No PSI files found to merge.")
-    }
-    
-    message(paste("Found", length(files), "files to merge."))
-    
+def aseQuote(value) {
+  return "'" + value.toString().replace("'", "'\"'\"'") + "'"
+}
 
-    message(paste("Processing base file:", files[1]))
-    merged_dt <- fread(files[1])
-    
+process ASE_DIFFERENTIAL {
+  label 'sclong'
+  tag { comparison_name }
+  publishDir "${params.outdir ?: 'Result'}/AlternativeSplicing/Differential", mode: 'copy'
 
-    colnames(merged_dt)[1] <- "ASE"
-    
+  input:
+    path merged_psi
+    tuple val(group1), val(group2), val(comparison_name)
+    path pipeline_bin
 
-    if (ncol(merged_dt) > 1) {
-        for (j in seq.int(2, ncol(merged_dt))) {
-            set(merged_dt, which(is.na(merged_dt[[j]])), j, 0)
-        }
-    }
-    
-   
-    if (length(files) > 1) {
-        for (i in 2:length(files)) {
-            f <- files[i]
-            message(paste("Merging:", f))
-            
-            dt <- fread(f)
-            colnames(dt)[1] <- "ASE"
-            
+  output:
+    tuple val(comparison_name), path("${comparison_name}"), emit: results
 
-            if (nrow(dt) != nrow(merged_dt)) {
-                stop(paste("Error: Row count mismatch in file:", f))
-            }
-
-            if (!identical(dt[[1]], merged_dt[["ASE"]])) {
-                stop(paste("Error: ASE row order mismatch in file:", f))
-            }
-            
-
-            if (ncol(dt) > 1) {
-                for (j in seq.int(2, ncol(dt))) {
-                    set(dt, which(is.na(dt[[j]])), j, 0)
-                }
-            }
-            
-
-            dt[, ASE := NULL]
-            
-
-            merged_dt <- cbind(merged_dt, dt)
-        }
-    }
-    
-    message("Writing merged output...")
-    fwrite(merged_dt, "merged_project_events.psi", sep = "\\t", quote = FALSE, row.names = FALSE)
-    message("Done.")
-    RSCRIPT
+  script:
+    def mapping = "sample\tstage\n" + params.sample_stage_mapping.collect { entry -> entry.join('\t') }.join('\n') + "\n"
+    def encodedMapping = mapping.bytes.encodeBase64().toString()
+    """
+    printf '%s' '${encodedMapping}' | base64 -d > stage_mapping.tsv
+    "${params.rscript_bin ?: 'Rscript'}" "${pipeline_bin}/AlternativeSplicing/ase_statistics.R" \
+      --psi_file "${merged_psi}" --stage_mapping stage_mapping.tsv \
+      --group1 ${aseQuote(group1)} --group2 ${aseQuote(group2)} \
+      --output_dir "${comparison_name}" --fdr ${params.ase_fdr} \
+      --fold_change ${params.ase_fold_change} --pseudocount ${params.ase_pseudocount}
     """
 }
 
@@ -566,7 +536,13 @@ workflow AlternativeSplicing {
     split_files_channel = split_results.split_files.flatten()
     psi_results = CALCULATE_PSI(events_results.merged_events, split_files_channel)
     all_psi_files = psi_results.psi_file.collect()
-    merge_results = MERGE_AS_RESULTS(all_psi_files)
+    merge_results = MERGE_AS_RESULTS(all_psi_files, pipeline_bin)
+    ase_diff_outputs = channel.empty()
+    if (params.ase_differential_enabled) {
+      comparison_ch = channel.fromList(params.comparisons).map { comparison -> tuple(comparison[0], comparison[1], comparison[2]) }
+      differential = ASE_DIFFERENTIAL(merge_results.merged_psi, comparison_ch, pipeline_bin)
+      ase_diff_outputs = differential.results
+    }
     
     // ------------------------------------------------------------------
     // Part 2: ASE Analysis
@@ -619,6 +595,8 @@ workflow AlternativeSplicing {
   emit:
     // ASE-related outputs
     merged_psi = merge_results.merged_psi
+    undefined_psi_counts = merge_results.missing_counts
+    differential_results = ase_diff_outputs
     merged_events = events_results.merged_events
     ase_analysis_results = ase_analysis.analysis_results
     ase_summary = ase_analysis.summary

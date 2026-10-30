@@ -55,11 +55,11 @@ def parse_differential_results(result_dir, comparison_name):
                 print(f"Reading {analysis} file...")
                 df = pd.read_csv(filepath, sep='\t')
                 print(f"  Success! Shape: {df.shape}, Columns: {list(df.columns)}")
-                
+
                 # Standardize column names for easier processing
                 if 'gene_name' not in df.columns and 'gene' in df.columns:
                     df['gene_name'] = df['gene']
-                
+
                 results[analysis] = df
             except Exception as e:
                 print(f"ERROR reading {analysis} file {filepath}: {str(e)}")
@@ -83,7 +83,7 @@ def find_intersection_genes(differential_results):
     """
     print("\nFinding genes in intersection of all four analyses...")
     
-    # Extract significant genes from each analysis
+    # Extract selected genes from each analysis
     gene_sets = {}
     
     # DDTU
@@ -97,7 +97,7 @@ def find_intersection_genes(differential_results):
         if type_col and gene_col in ddtu_df.columns:
             ddtu_sig = ddtu_df[ddtu_df[type_col] != 'notSig'][gene_col].dropna().unique()
             gene_sets['DDTU'] = set(ddtu_sig)
-            print(f"  DDTU significant genes: {len(gene_sets['DDTU'])}")
+            print(f"  DDTU selected genes: {len(gene_sets['DDTU'])}")
     
     # DTE
     dte_df = differential_results.get('DTE')
@@ -109,7 +109,7 @@ def find_intersection_genes(differential_results):
         if type_col in dte_df.columns and gene_col in dte_df.columns:
             dte_sig = dte_df[dte_df[type_col] != 'Stable'][gene_col].dropna().unique()
             gene_sets['DTE'] = set(dte_sig)
-            print(f"  DTE significant genes: {len(gene_sets['DTE'])}")
+            print(f"  DTE selected genes: {len(gene_sets['DTE'])}")
     
     # DGE
     dge_df = differential_results.get('DGE')
@@ -121,7 +121,7 @@ def find_intersection_genes(differential_results):
         if type_col in dge_df.columns and gene_col in dge_df.columns:
             dge_sig = dge_df[dge_df[type_col] != 'Stable'][gene_col].dropna().unique()
             gene_sets['DGE'] = set(dge_sig)
-            print(f"  DGE significant genes: {len(gene_sets['DGE'])}")
+            print(f"  DGE selected genes: {len(gene_sets['DGE'])}")
     
     # DGU
     dgu_df = differential_results.get('DGU')
@@ -133,7 +133,7 @@ def find_intersection_genes(differential_results):
         if type_col in dgu_df.columns and gene_col in dgu_df.columns:
             dgu_sig = dgu_df[dgu_df[type_col] != 'notSig'][gene_col].dropna().unique()
             gene_sets['DGU'] = set(dgu_sig)
-            print(f"  DGU significant genes: {len(gene_sets['DGU'])}")
+            print(f"  DGU selected genes: {len(gene_sets['DGU'])}")
     
     # Find intersection
     if len(gene_sets) == 4:
@@ -251,7 +251,7 @@ def generate_prompt(intersection_genes, gene_details, study_description, compari
     
     # Format gene information
     genes_info = []
-    for i, gene in enumerate(intersection_genes[:15], 1):  # Limit to first 15 genes for prompt length
+    for i, gene in enumerate(intersection_genes, 1):
         details = gene_details.get(gene, {})
         
         gene_info = f"{i}. {gene}\n"
@@ -285,49 +285,29 @@ def generate_prompt(intersection_genes, gene_details, study_description, compari
         
         genes_info.append(gene_info)
     
-    prompt = f"""You are a senior bioinformatics expert and molecular biologist. Please provide a comprehensive biological interpretation of genes that are significantly altered across all four analysis types in our single-cell transcriptomics study.
-
-STUDY CONTEXT:
+    prompt = f"""Interpret the supplied gene intersection from a single-cell long-read analysis.
+Study context is descriptive data, not evidence for a mechanism:
 {study_description}
 
-ANALYSIS DETAILS:
-We are comparing {group1} vs {group2} ({comparison_name}).
-The analysis includes four complementary approaches:
-1. DDTU (Differential Dominant Transcript Usage): Changes in the main transcript isoform used
-2. DTE (Differential Transcript Expression): Changes in individual transcript expression levels
-3. DGE (Differential Gene Expression): Changes in overall gene expression
-4. DGU (Differential Gene Usage): Changes in the proportion of cells expressing each gene
-
-KEY FINDING:
-We have identified {len(intersection_genes)} genes that are significantly altered in ALL FOUR analysis types. These genes represent the core molecular signature of the biological changes between {group1} and {group2}.
-
-GENE-SPECIFIC INFORMATION (showing {min(15, len(intersection_genes))} of {len(intersection_genes)} genes):
+Comparison: {group1} versus {group2} ({comparison_name}).
+All {len(intersection_genes)} intersection members are included below; do not treat their alphabetical
+order as a ranking. Consider the whole list and both supporting and conflicting evidence.
 {chr(10).join(genes_info)}
 
-YOUR TASK:
-Please provide a comprehensive biological interpretation covering:
+Measurement definitions:
+- DGE and DTE use the configured RNA expression test and adjusted P-value/effect cutoffs.
+- DGU describes changes in gene detection fractions.
+- The legacy DDTU table uses conditional transcript detection fractions for transcripts with unique
+  dominant calls, classified by an effect threshold. DGU/DDTU type labels are not P values.
+- These endpoints share cells and features and are not independent validation experiments.
 
-1. OVERALL SIGNIFICANCE:
-   - Why is it particularly meaningful that these genes appear in all four analysis types?
-   - What does this multi-level convergence suggest about the robustness and biological importance of these changes?
-
-2. BIOLOGICAL PATHWAYS AND FUNCTIONS:
-   - Based on the specific genes identified, what biological pathways or cellular processes are most affected?
-   - How do these pathways relate to the disease/condition being studied?
-
-3. REGULATORY MECHANISMS:
-   - What do the convergent changes at transcript usage, transcript expression, gene expression, and gene usage levels suggest about underlying regulatory mechanisms?
-   - Are these changes likely driven by transcriptional regulation, post-transcriptional regulation, or both?
-
-4. DISEASE/PHENOTYPE RELEVANCE:
-   - How might these multi-level changes contribute to the phenotypic differences between {group1} and {group2}?
-   - Do any of these genes have known relevance to the specific disease/condition?
-
-5. THERAPEUTIC IMPLICATIONS:
-   - Based on these findings, what might be promising therapeutic targets or intervention strategies?
-   - Which of these genes or pathways might be most amenable to therapeutic modulation?
-
-Please provide a detailed, well-organized response suitable for both biologists and bioinformaticians. Focus on biological insight rather than statistical description.
+Return a concise functional name and explanation when a coherent process is supported.
+If the list is heterogeneous or the evidence is insufficient, explicitly abstain from assigning one
+unifying function. Explain which supplied genes support each proposed process and which do not.
+Separate observed associations, established background knowledge and testable hypotheses.
+Do not invent expression values, enrichment tests, database searches, citations or validation.
+Do not infer causality, therapeutic efficacy or general model accuracy from this intersection.
+Any disease relevance must be framed as a hypothesis unless the supplied results establish it.
 """
     return prompt
 
@@ -356,7 +336,7 @@ def call_llm_api(prompt, client, model="deepseek-chat"):
                     "content": prompt
                 }
             ],
-            temperature=0.7,
+
             max_tokens=3000
         )
         
@@ -432,7 +412,7 @@ exploring disease-associated molecular changes at multiple levels."""
             f.write("No genes were found in the intersection of all four analysis types.\n\n")
             f.write("Individual analysis statistics:\n")
             for analysis, gene_set in gene_sets.items():
-                f.write(f"  {analysis}: {len(gene_set)} significant genes\n")
+                f.write(f"  {analysis}: {len(gene_set)} selected genes\n")
             f.write("\nInterpretation: The absence of genes in the intersection suggests that the molecular changes\n")
             f.write("between conditions are distributed across different regulatory layers rather than concentrated\n")
             f.write("in a few genes. This could indicate complex, multi-layered regulatory mechanisms at play.\n")
@@ -448,7 +428,7 @@ exploring disease-associated molecular changes at multiple levels."""
         with open(summary_file, 'w') as f:
             f.write("No genes were shared by all four differential analyses.\n")
             for analysis, gene_set in sorted(gene_sets.items()):
-                f.write(f"{analysis}: {len(gene_set)} significant genes\n")
+                f.write(f"{analysis}: {len(gene_set)} selected genes\n")
         sys.exit(0)
     
     print(f"\nFound {len(intersection_genes)} genes in intersection of all four analyses:")
@@ -493,7 +473,9 @@ exploring disease-associated molecular changes at multiple levels."""
             'model': api_result['model'],
             'tokens_used': api_result['tokens_used'],
             'prompt_length': len(prompt),
-            'response_length': len(interpretation)
+            'response_length': len(interpretation),
+            'raw_response': interpretation,
+            'input_scope': 'all intersection genes; no silent top-gene truncation'
         }
         
         with open(args.output_api, 'w') as f:
@@ -528,7 +510,7 @@ Individual Analysis Statistics:
 {'-' * 50}"""
     
     for analysis, gene_set in gene_sets.items():
-        summary += f"\n{analysis}: {len(gene_set)} significant genes"
+        summary += f"\n{analysis}: {len(gene_set)} selected genes"
     
     summary += f"\n\nGenes in Intersection of All Four Analyses:"
     summary += f"\n{'-' * 50}"
@@ -559,12 +541,12 @@ Individual Analysis Statistics:
             summary += f"   • DGU: {dgu_type} (log2FC: {dgu_fc:.2f})\n"
     
     summary += f"\n{'=' * 50}\n"
-    summary += "Note: These genes show significant changes in all four analysis types:\n"
+    summary += "Note: These genes meet the configured selection rules across four analysis types:\n"
     summary += "1. Differential Dominant Transcript Usage (DDTU)\n"
     summary += "2. Differential Transcript Expression (DTE)\n"
     summary += "3. Differential Gene Expression (DGE)\n"
     summary += "4. Differential Gene Usage (DGU)\n"
-    summary += "\nThis convergence suggests they are core regulators of the observed biological changes."
+    summary += "\nShared selection is descriptive; it does not establish independent validation or causal regulation."
     
     with open(summary_file, 'w') as f:
         f.write(summary)

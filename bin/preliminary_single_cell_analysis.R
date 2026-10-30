@@ -127,10 +127,13 @@ process_seurat <- function(obj, matrix_type, species) {
     
     # Run doublet detection if scrubletR is available
     doublet_rate <- NA_real_
+    doublet_detection_performed <- FALSE
     if (require(scrubletR, quietly = TRUE)) {
       tryCatch({
         obj <- scrublet_R(obj)
         doublet_rate <- sum(obj$predicted_doublets) / length(obj$predicted_doublets)
+        doublet_detection_performed <- is.finite(doublet_rate) &&
+          "predicted_doublets" %in% colnames(obj@meta.data)
       }, error = function(e) {
         cat("Doublet detection failed:", e$message, "\n")
         obj$predicted_doublets <- FALSE
@@ -139,6 +142,8 @@ process_seurat <- function(obj, matrix_type, species) {
       obj$predicted_doublets <- FALSE
       cat("scrubletR not available, skipping doublet detection\n")
     }
+    # Preserve whether FALSE labels came from an actual detection run.
+    obj$doublet_detection_performed <- doublet_detection_performed
     
     # Filter cells
     nCount <- obj@meta.data$nCount_RNA
@@ -457,10 +462,15 @@ main <- function() {
       
       # Add annotation to gene-level Seurat object
       sce.gene$cell_anno_llm <- 'Unknown'
+      sce.gene$cell_anno_llm_confidence <- NA_integer_
       for (ct in cell_ann$Cluster) {
         if (ct %in% as.character(sce.gene$seurat_clusters)) {
           sce.gene$cell_anno_llm[as.character(sce.gene$seurat_clusters) == ct] <- 
             cell_ann$Cell.Type[cell_ann$Cluster == ct]
+          if ("Confidence" %in% colnames(cell_ann)) {
+            sce.gene$cell_anno_llm_confidence[as.character(sce.gene$seurat_clusters) == ct] <-
+              cell_ann$Confidence[cell_ann$Cluster == ct]
+          }
         }
       }
       

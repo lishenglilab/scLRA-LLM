@@ -8,6 +8,9 @@ include { AlternativeSplicing } from './modules/AlternativeSplicing.nf'
 include { IntegrativeAnalysis } from './modules/IntegrativeAnalysis.nf'
 
 workflow {
+  if (params.qc_report_enabled && !(params.qc_read_source in ['auto', 'bam', 'fastq'])) {
+    error "params.qc_read_source must be auto, bam or fastq"
+  }
   def llm_key_present = !(System.getenv('LLM_API_KEY') ?: '').trim().isEmpty()
   def llm_base_url = (params.llm_base_url ?: '').toString().trim()
   if (params.llm_enabled && !llm_key_present) {
@@ -60,8 +63,8 @@ workflow {
     if (mapping.any { value -> value.toString() != value.toString().trim() }) {
       error "Sample-stage values cannot have leading or trailing whitespace: ${mapping}"
     }
-    if (!(mapping[0].toString() ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/)) {
-      error "Mapped sample IDs must contain only letters, numbers, '.', '_' or '-': ${mapping[0]}"
+    if (!(mapping[0].toString() ==~ /[A-Za-z0-9][A-Za-z0-9.-]*/)) {
+      error "Mapped sample IDs must contain only letters, numbers, '.' or '-': ${mapping[0]}"
     }
   }
   def mapped_samples = params.sample_stage_mapping.collect { mapping -> mapping[0].toString().trim() }
@@ -91,7 +94,7 @@ workflow {
   )
 
   // Module (3): PreliminarySingleCellAnalysis
-  sc = PreliminarySingleCellAnalysis(align.isoquant_out)
+  sc = PreliminarySingleCellAnalysis(align.isoquant_out, align.read_groups, params.genedb_gtf)
 
   // Module (4): AlternativeSplicing
   splicing = AlternativeSplicing(

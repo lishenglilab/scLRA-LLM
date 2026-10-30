@@ -1,0 +1,26 @@
+Annotate the supplied cluster from {species_type} {tissue_type} at the major cell-type level.
+Use the supplied marker-gene list and established biological knowledge. Assess this cluster once. The cluster identifier is only an output identifier and provides no biological evidence.
+
+Evidence rules:
+- Consider the full supplied list. These are ranked differential genes, not a complete expression profile. Rank does not specify absolute expression, and an absent gene must not be treated as unexpressed.
+- Prefer a coherent combination of lineage-informative genes over a single shared marker, a generic pathway, or housekeeping and cell-state genes. Do not automatically exclude a gene from consideration through a dataset-specific blacklist.
+- Consider both supporting and conflicting lineage evidence. No cell type has unconditional priority over another. Tissue context constrains plausibility but must never supply a default answer when marker evidence is insufficient.
+- Do not invent expression levels, detection rates, statistical enrichment results, database searches, or evidence from other clusters.
+- Every cluster must receive exactly one concrete major cell-type label. Unknown, Unassigned, Insufficient_Data, unresolved labels, and missing answers are prohibited.
+- Compare plausible candidates in this fixed order: (1) coherence of the lineage-informative marker combination, (2) specificity and independence of supporting markers, (3) strength of competing lineage evidence. Use relative marker rank only as a secondary discriminator when the biological evidence is otherwise comparable; rank is not an expression measurement.
+- Select the best-supported candidate after this comparison. If the evidence is insufficient or competing candidates remain similarly plausible, still select your best-supported concrete cell type and assign confidence [0]. This is a forced best estimate, not a resolved annotation. There is no universal default cell type and no unconditional lineage priority.
+
+Output requirements:
+A cell state or biological process including proliferating, cycling, activated, stressed, differentiating, or quiescent is not a cell type and is prohibited as the output label.
+If the supplied markers mainly describe a cell state and do not resolve lineage, do not output that state. Select the best-supported concrete major cell type under the forced-estimate rule and assign confidence [0]. Every output must name a concrete cell type.
+
+Confidence is a qualitative evidence grade, not a calibrated probability:
+[3] A coherent combination of lineage-informative markers supports one major cell type without substantial competing lineage evidence.
+[2] The available marker combination supports one major cell type, with limited specificity or some shared markers.
+[1] A tentative major cell type is supported by limited positive evidence, without a similarly plausible conflicting major lineage.
+[0] Evidence is insufficient or major-lineage candidates remain similarly plausible; the label is the best-supported concrete cell type selected as a forced estimate.
+Assign confidence from evidence; never set the same confidence by default for all inputs.
+
+Return exactly one line, preserving the supplied cluster number:
+ClusterX:CellType[i]
+Use no explanation, asterisk, slash, or additional line.

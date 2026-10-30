@@ -12,6 +12,9 @@ suppressPackageStartupMessages({
   library(ggpubr)
 })
 
+script <- sub("^--file=", "", commandArgs()[grepl("^--file=", commandArgs())][1])
+source(file.path(dirname(normalizePath(script)), "count_helpers.R"))
+
 # Define command line options
 option_list <- list(
   make_option(c("-s", "--seurat_rds"), type="character", default=NULL,
@@ -95,7 +98,9 @@ sce.tr <- readRDS(seurat_rds)
 
 # Extract expression matrix
 log_message("Extracting expression matrix...")
-exp <- as.data.frame(sce.tr@assays$RNA@layers$counts)
+counts <- rna_counts(sce.tr)
+validate_counts(counts)
+exp <- as.data.frame(as.matrix(counts))
 colnames(exp) <- colnames(sce.tr)
 rownames(exp) <- rownames(sce.tr)
 exp <- rownames_to_column(exp, 'transcript_id')
@@ -108,7 +113,7 @@ id_map <- id_map %>%
   group_by(gene_id) %>%
   mutate(gene_name = case_when(
     is.na(gene_name) & all(is.na(gene_name)) ~ gene_id,  
-    is.na(gene_name) ~ first(gene_name[!is.na(gene_name)]),  
+    is.na(gene_name) ~ dplyr::first(gene_name[!is.na(gene_name)]),
     TRUE ~ gene_name  
   )) %>%
   ungroup()
@@ -181,7 +186,7 @@ usage_matrix <- merged_matrix %>%
 
 usage_matrix <- usage_matrix %>%
   dplyr::select(transcript_id, gene_id, ends_with("_usage"))
-usage_matrix[is.na(usage_matrix)] <- 0
+# Zero gene denominators remain undefined in the usage output.
 colnames(usage_matrix)[3:ncol(usage_matrix)] <- gsub('_tr_usage', '', 
                                                      colnames(usage_matrix)[3:ncol(usage_matrix)])
 
@@ -201,44 +206,32 @@ dt <- fread(transcript_usage_file)
 id_cols <- colnames(dt)[1:2]          # transcript_id, gene_id
 cell_cols <- colnames(dt)[-(1:2)]     # All Cell IDs
 
-# Function to process single cell column
-get_dominant <- function(usage_vec, transcript_vec) {
-  if (all(usage_vec == 0)) return(NA_character_)
-  return(transcript_vec[which.max(usage_vec)])
-}
-
-# Process each cell in parallel
-log_message(paste("Processing", length(cell_cols), "cells..."))
-
+# Keep unique calls and tied maxima separate; no transcript wins a tie by row order.
 results_list <- lapply(cell_cols, function(cell_id) {
-  # Extract current cell's usage
   usage_values <- dt[[cell_id]]
-  
-  # Filter rows with usage > 0
-  temp_dt <- dt[usage_values > 0, .(
-    transcript_id = get(id_cols[1]), 
-    gene_id = get(id_cols[2]), 
-    usage = usage_values[usage_values > 0]
-  )]
-  
-  # Find transcript with max usage per gene
-  if (nrow(temp_dt) > 0) {
-    dom_dt <- temp_dt[, .(DominantTranscript = transcript_id[which.max(usage)]), 
-                      by = .(gene_id)]
-    dom_dt[, Cellid := cell_id]
-    return(dom_dt)
-  } else {
-    return(NULL)
-  }
+  keep <- !is.na(usage_values) & usage_values > 0
+  temp_dt <- dt[keep, .(transcript_id = get(id_cols[1]),
+                        gene_id = get(id_cols[2]), usage = usage_values[keep])]
+  if (!nrow(temp_dt)) return(NULL)
+  calls <- temp_dt[, dominant_call(usage, transcript_id), by = gene_id]
+  calls[, Cellid := cell_id]
+  calls
 })
-
-# Combine results
-final_results <- rbindlist(results_list[!sapply(results_list, is.null)])
-
-# Reorder columns and save
-setcolorder(final_results, c("gene_id", "Cellid", "DominantTranscript"))
-
-log_message(paste("Saving dominant transcripts to:", dominant_transcripts_file))
+call_audit <- rbindlist(results_list, use.names = TRUE)
+if (!nrow(call_audit)) {
+  call_audit <- data.table(gene_id = character(), DominantTranscript = character(),
+                          dominance_status = character(), n_tied = integer(), Cellid = character())
+}
+fwrite(call_audit, file.path(output_dir, "dominance_calls.tsv"), sep = "\t", na = "NA")
+n_genes <- uniqueN(dt$gene_id)
+cell_audit <- data.table(Cellid = cell_cols)
+summary_calls <- call_audit[, .(unique_calls = sum(dominance_status == "unique"),
+                               tied_calls = sum(dominance_status == "tie")), by = Cellid]
+cell_audit <- merge(cell_audit, summary_calls, by = "Cellid", all.x = TRUE, sort = FALSE)
+cell_audit[is.na(unique_calls), `:=`(unique_calls = 0L, tied_calls = 0L)]
+cell_audit[, unexpressed_genes := n_genes - unique_calls - tied_calls]
+fwrite(cell_audit, file.path(output_dir, "dominance_by_cell.tsv"), sep = "\t")
+final_results <- call_audit[dominance_status == "unique", .(gene_id, Cellid, DominantTranscript)]
 fwrite(final_results, dominant_transcripts_file, sep = "\t", quote = FALSE)
 
 # ----------------------------------------------------------------------
@@ -354,9 +347,25 @@ if (length(valid_comparisons) == 0) {
   # Read dominant transcripts
   df <- fread(dominant_transcripts_file)
   res <- unique(df[, c('gene_id', 'DominantTranscript')])
+  if (!nrow(res)) {
+    # Retain comparison tables so downstream tasks receive a valid empty result.
+    for (comp_name in names(valid_comparisons)) {
+      comp <- valid_comparisons[[comp_name]]
+      comp_dir <- file.path(output_dir, comp_name)
+      dir.create(comp_dir, recursive = TRUE, showWarnings = FALSE)
+      empty <- data.frame(gene_id = character(), transcript_id = character(), gene_name = character())
+      empty[[paste0(comp$group1, "_pct")]] <- numeric()
+      empty[[paste0(comp$group2, "_pct")]] <- numeric()
+      empty$lgFC <- numeric(); empty$type <- character()
+      write.table(empty, file.path(comp_dir, paste0("statistics_", comp_name, ".txt")), sep = "\t", row.names = FALSE, quote = FALSE)
+    }
+    saveRDS(data.frame(), dominant_pct_file)
+    writeLines("No unique dominant transcript calls; inspect dominance_calls.tsv", dominant_stats_file)
+    quit(save = "no", status = 0)
+  }
   
   # Get normalized expression matrix
-  exp_norm <- as.data.frame(sce.tr@assays$RNA@layers$data)
+  exp_norm <- as.data.frame(as.matrix(counts))
   rownames(exp_norm) <- rownames(sce.tr)
   colnames(exp_norm) <- colnames(sce.tr)
   
@@ -369,7 +378,8 @@ if (length(valid_comparisons) == 0) {
   log_message("Processing each gene...")
   all_res_data <- foreach(ge = unique(res$gene_id), .combine = rbind, .packages = "dplyr") %dopar% {
     trs <- res$DominantTranscript[res$gene_id == ge]
-    exp_sub <- exp_norm[trs, , drop = FALSE]
+    all_gene_trs <- id_map$transcript_id[id_map$gene_id == ge]
+    exp_sub <- exp_norm[all_gene_trs, , drop = FALSE]
     
     gene_res <- data.frame()
     
@@ -377,13 +387,13 @@ if (length(valid_comparisons) == 0) {
       # Calculate expression percentage for each stage
       stage_pcts <- sapply(all_stages, function(stage) {
         stage_cells <- meta$cell_id[meta$stage == stage]
-        if (length(stage_cells) == 0) return(0)
+        if (length(stage_cells) == 0) return(NA_real_)
         
         # Cells expressing the gene in this stage
-        gene_exp_cells <- colnames(exp_sub)[apply(exp_sub[, stage_cells, drop = FALSE] > 0, 2, any)]
+        gene_exp_cells <- stage_cells[colSums(exp_sub[, stage_cells, drop = FALSE] > 0) > 0]
         n_gene_stage <- length(gene_exp_cells)
         
-        if (n_gene_stage == 0) return(0)
+        if (n_gene_stage == 0) return(NA_real_)
         
         # Cells expressing this transcript in this stage
         n_tr_stage <- sum(exp_sub[tr, stage_cells] > 0)
@@ -456,6 +466,11 @@ if (length(valid_comparisons) == 0) {
       ifelse(comp_data$lgFC < -logfc_threshold, group1, "notSig")
     )
     
+    comp_data$evaluable <- is.finite(comp_data$lgFC)
+    comp_data$type[!comp_data$evaluable] <- "notSig"
+    # Keep legacy type codes; they describe effect thresholds, not P values.
+    comp_data$selection_basis <- "conditional_detection_fraction_effect_threshold"
+
     # Save comparison-specific statistics
     comp_stats_file <- file.path(comp_dir, paste0("statistics_", comp_name, ".txt"))
     write.table(comp_data, comp_stats_file, sep = '\t', row.names = FALSE, quote = FALSE)
