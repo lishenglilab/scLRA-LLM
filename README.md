@@ -40,6 +40,13 @@ unzip assets/3M-february-2018.zip -d assets
 
 The archive contains the 10x 3M barcode whitelist referenced by the default configuration. If a different chemistry or whitelist is used, update `params.whitelist` instead. No API credentials are required when LLM support is disabled.
 
+## Demos
+
+For a first run, see the [compact matrix and cell-focused FASTQ demos](demo/README.md).
+The matrix demo uses a versioned, checksum-verified download and starts at the normal
+single-cell analysis step without downloading a whole genome. The FASTQ demo also exercises
+preprocessing and alignment. Neither demo requires an API key.
+
 ## Input configuration
 
 Before running, edit [`nextflow.config`](nextflow.config) and check at least:
@@ -235,9 +242,13 @@ The current update is checked using:
 - Python regression checks for QC metrics, independent annotation requests and interpretation input scope
 - QC-only Nextflow runs with LLM disabled, a successful local mock response and a malformed-response fallback
 - Native SUPPA split/merge and two-comparison Nextflow integration on six synthetic cells
+- Matched public-data FASTQ and matrix demos, frozen-archive checks and paired raw-count validation
 
-These checks use installed dependencies and local mock LLM responses. They do not rerun a complete
-FASTQ-to-results study or a fresh Conda solve, and do not measure biological or model accuracy.
+Demo execution evidence and versions are recorded in [`demo/validation.json`](demo/validation.json).
+The full demos use installed analysis environments; preprocessing dependencies were also installed
+fresh and tested separately. A fresh installation of the remaining R/alignment/splicing stack is
+not implied. LLM regression checks use local mock responses. These software checks do not measure
+biological or model accuracy.
 
 QC-specific checks include Seurat v4/v5 count layers, exact cell alignment, valid label cohorts, skipped doublet detection, recomputed MT, partial structural annotation, distinct BAM/read-group identifiers, sample totals and medians, immutable metrics across interpretation, and local mock-API success/failure. Run the QC regression and the actual Nextflow QC-only tasks with:
 

@@ -9,5 +9,8 @@ __pycache__/
 *.py[cod]
 
 .env
+demo/data/
+results_demo_matrix/
+results_demo_fastq/
 .env.*
 !.env.example

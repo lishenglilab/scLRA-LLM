@@ -570,28 +570,49 @@ workflow AlternativeSplicing {
     // ------------------------------------------------------------------
     def dominant_results_dir = dominant_isoform.analysis_results_dir
     
-    // 4a: Preparation phase
-    isoform_switch_prep = ISOFORM_SWITCH_PREPARATION(
-      dominant_results_dir,
-      seurat_tr,
-      seurat_gene,
-      gtf_file,
-      transcript_fasta,
-      pipeline_bin
-    )
-    
-    // 4b: Consequences phase
-    isoform_switch_conseq = ISOFORM_SWITCH_CONSEQUENCES(
-      isoform_switch_prep.switchlist_rds,
-      pipeline_bin
-    )
+    switch_preparation_outputs = channel.empty()
+    switchlist_outputs = channel.empty()
+    switch_preparation_summary = channel.empty()
+    switch_consequence_outputs = channel.empty()
+    switch_consequence_summary = channel.empty()
+    switch_interpretation_outputs = channel.empty()
+    switch_api_outputs = channel.empty()
+    switch_gene_outputs = channel.empty()
+    if (params.isoform_switch_enabled) {
+      // 4a: Preparation phase
+      isoform_switch_prep = ISOFORM_SWITCH_PREPARATION(
+        dominant_results_dir,
+        seurat_tr,
+        seurat_gene,
+        gtf_file,
+        transcript_fasta,
+        pipeline_bin
+      )
 
-    // 4c: Optional provider-agnostic LLM interpretation.
-    biological_interpretation = LLM_ISOFORM_SWITCH_INTERPRETATION(
-      isoform_switch_conseq.consequences_results,
-      pipeline_bin
-    )
-  
+      // 4b: Consequences phase
+      isoform_switch_conseq = ISOFORM_SWITCH_CONSEQUENCES(
+        isoform_switch_prep.switchlist_rds,
+        pipeline_bin
+      )
+
+      // 4c: Optional provider-agnostic LLM interpretation.
+      biological_interpretation = LLM_ISOFORM_SWITCH_INTERPRETATION(
+        isoform_switch_conseq.consequences_results,
+        pipeline_bin
+      )
+
+      switch_preparation_outputs = isoform_switch_prep.preparation_results
+      switchlist_outputs = isoform_switch_prep.switchlist_rds
+      switch_preparation_summary = isoform_switch_prep.prep_summary
+      switch_consequence_outputs = isoform_switch_conseq.consequences_results
+      switch_consequence_summary = isoform_switch_conseq.conseq_summary
+      switch_interpretation_outputs = biological_interpretation.interpretation_report
+      switch_api_outputs = biological_interpretation.api_response
+      switch_gene_outputs = biological_interpretation.gene_summary
+    } else {
+      log.info 'Isoform-switch replicate modelling disabled (isoform_switch_enabled=false)'
+    }
+
   emit:
     // ASE-related outputs
     merged_psi = merge_results.merged_psi
@@ -606,17 +627,17 @@ workflow AlternativeSplicing {
     dominant_summary = dominant_isoform.summary
     
     // Isoform switch preparation outputs
-    switch_prep_results = isoform_switch_prep.preparation_results
-    switchlist_file = isoform_switch_prep.switchlist_rds
-    switch_prep_summary = isoform_switch_prep.prep_summary
+    switch_prep_results = switch_preparation_outputs
+    switchlist_file = switchlist_outputs
+    switch_prep_summary = switch_preparation_summary
     
     // Isoform switch consequences outputs
-    switch_conseq_results = isoform_switch_conseq.consequences_results
-    switch_conseq_summary = isoform_switch_conseq.conseq_summary
+    switch_conseq_results = switch_consequence_outputs
+    switch_conseq_summary = switch_consequence_summary
 
     // Biological interpretation outputs (may be empty if API key not provided)
-    interpretation_report = biological_interpretation.interpretation_report
-    api_response = biological_interpretation.api_response
-    gene_summary = biological_interpretation.gene_summary
+    interpretation_report = switch_interpretation_outputs
+    api_response = switch_api_outputs
+    gene_summary = switch_gene_outputs
 
 }

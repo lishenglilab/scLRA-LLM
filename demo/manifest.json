@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "dataset_version": "v1.0.0",
+  "source_run": "SRR14808743",
+  "source_series": "GSE178175",
+  "assets": {
+    "fastq": {
+      "filename": "scLRA-demo-fastq-v1.0.0.tar.gz",
+      "bytes": 283162174,
+      "sha256": "950b888b8b5de02466f2580ab47a61482a5a5816cdb96a4e13de51548092b770",
+      "url": "https://github.com/lishenglilab/scLRA-LLM/releases/download/demo-v1.0.0/scLRA-demo-fastq-v1.0.0.tar.gz"
+    },
+    "matrix": {
+      "filename": "scLRA-demo-matrix-v1.0.0.tar.gz",
+      "bytes": 32915730,
+      "sha256": "d1fb0f9b2331966bbff9ccff88090199affb31b206f8989313c6b6f29db72409",
+      "url": "https://github.com/lishenglilab/scLRA-LLM/releases/download/demo-v1.0.0/scLRA-demo-matrix-v1.0.0.tar.gz"
+    }
+  }
+}

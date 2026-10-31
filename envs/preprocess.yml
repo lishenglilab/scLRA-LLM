@@ -13,6 +13,8 @@ dependencies:
   - pip:
     - fast-edit-distance==1.2.1
     - blaze2
-    - NanoPlot
+    - NanoPlot==1.44.1
+    - kaleido==0.2.1
+    - plotly<6
     - nanofilt==2.8.0
     - openai>=1,<2

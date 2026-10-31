@@ -2,12 +2,15 @@
 nextflow.enable.dsl=2
 
 include { InputAndPreprocess } from './modules/InputAndPreprocess.nf'
-include { AlignmentAndTranscriptReconstruction } from './modules/AlignmentAndTranscriptReconstruction.nf'
+include { AlignmentAndTranscriptReconstruction; ORF_CALL as MATRIX_ORF_CALL } from './modules/AlignmentAndTranscriptReconstruction.nf'
 include { PreliminarySingleCellAnalysis } from './modules/PreliminarySingleCellAnalysis.nf'
 include { AlternativeSplicing } from './modules/AlternativeSplicing.nf'
 include { IntegrativeAnalysis } from './modules/IntegrativeAnalysis.nf'
 
 workflow {
+  if (!(params.input_mode in ['fastq', 'matrix'])) {
+    error "params.input_mode must be fastq or matrix"
+  }
   if (params.qc_report_enabled && !(params.qc_read_source in ['auto', 'bam', 'fastq'])) {
     error "params.qc_read_source must be auto, bam or fastq"
   }
@@ -83,35 +86,55 @@ workflow {
     }
   }
 
-  // Module (1): InputAndPreprocess
-  pre = InputAndPreprocess(params.metadata, params.whitelist)
-
-  // Module (2): AlignmentAndTranscriptReconstruction
-  align = AlignmentAndTranscriptReconstruction(
-    pre.filtered_fastq,
-    params.reference_fa,
-    params.genedb_gtf
-  )
+  def analysis_inputs
+  if (params.input_mode == 'matrix') {
+    if (!params.matrix_input_dir) error "matrix mode requires --matrix_input_dir"
+    def root = file(params.matrix_input_dir, checkIfExists: true)
+    def transcript_fa = file("${root}/transcripts.fa", checkIfExists: true)
+    def supplied_orfs = file("${root}/ORF.fa")
+    def matrix_orf_fa
+    if (supplied_orfs.exists()) {
+      matrix_orf_fa = supplied_orfs
+    } else {
+      matrix_orfs = MATRIX_ORF_CALL(transcript_fa, file("${projectDir}/bin", checkIfExists: true))
+      matrix_orf_fa = matrix_orfs.orf_fa
+    }
+    analysis_inputs = [
+      isoquant_out: file("${root}/IsoQuant_sc", checkIfExists: true),
+      read_groups: file("${root}/all_read_groups.tsv", checkIfExists: true),
+      reference_gtf: file("${root}/reference.gtf", checkIfExists: true),
+      models_gtf: file("${root}/transcripts.gtf", checkIfExists: true),
+      models_fa_1line: transcript_fa,
+      orf_fa: matrix_orf_fa
+    ]
+  } else {
+    pre = InputAndPreprocess(params.metadata, params.whitelist)
+    align = AlignmentAndTranscriptReconstruction(pre.filtered_fastq, params.reference_fa,
+      params.isoquant_annotation_db ?: params.genedb_gtf)
+    analysis_inputs = [isoquant_out: align.isoquant_out, read_groups: align.read_groups,
+      reference_gtf: params.genedb_gtf, models_gtf: align.models_gtf,
+      models_fa_1line: align.models_fa_1line, orf_fa: align.orf_fa]
+  }
 
   // Module (3): PreliminarySingleCellAnalysis
-  sc = PreliminarySingleCellAnalysis(align.isoquant_out, align.read_groups, params.genedb_gtf)
+  sc = PreliminarySingleCellAnalysis(analysis_inputs.isoquant_out, analysis_inputs.read_groups, analysis_inputs.reference_gtf)
 
   // Module (4): AlternativeSplicing
   splicing = AlternativeSplicing(
     sc.seurat_tr,
     sc.seurat_gene,
-    align.models_gtf,         
-    align.models_fa_1line,    
-    align.isoquant_out        
+    analysis_inputs.models_gtf,
+    analysis_inputs.models_fa_1line,
+    analysis_inputs.isoquant_out
   )
   
   // Module (5): IntegrativeAnalysis 
   IntegrativeAnalysis(
     sc.seurat_tr,           // seurat_tr
     sc.seurat_gene,         // seurat_gene
-    align.models_gtf,       // gtf_file
+    analysis_inputs.models_gtf,       // gtf_file
     splicing.dominant_results, // dominant_results
-    align.orf_fa            // orf_fasta
+    analysis_inputs.orf_fa            // orf_fasta
   )
 
 }

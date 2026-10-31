@@ -93,10 +93,11 @@ process NANOPLOT_QC {
   
   script:
     def fastq_args = fastq_files.collect { fastq -> "\"${fastq}\"" }.join(' ')
+    def staticArg = params.nanoplot_static ? '' : '--no_static'
     """
     mkdir -p all_samples_NanoPlot_output
     
-    NanoPlot \
+    NanoPlot ${staticArg} \
       -t ${params.threads ?: 2} \
       --fastq ${fastq_args} \
       -o all_samples_NanoPlot_output \
