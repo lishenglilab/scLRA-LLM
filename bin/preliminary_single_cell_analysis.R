@@ -361,15 +361,29 @@ main <- function() {
   
   # Load data
   cat("Loading gene matrix from:", opts$gene_matrix, "\n")
+  read_checked_matrix <- function(directory) {
+    counts <- Read10X(data.dir = directory)
+    if (is.list(counts)) stop("Expected one RNA matrix in ", directory)
+    keep <- Matrix::rowSums(counts > 0) >= opts$min_cells
+    detected <- Matrix::colSums(counts > 0)
+    if (!any(detected >= opts$min_features)) {
+      stop("No cells pass min_features=", opts$min_features,
+        " in ", directory,
+        ". Maximum detected features per cell: ", max(c(0, detected)),
+        ". Supply deeper cell-focused data or explicitly choose appropriate thresholds.", call. = FALSE)
+    }
+    if (!any(keep)) stop("No features pass min_cells=", opts$min_cells, " in ", directory, call. = FALSE)
+    counts
+  }
   sce.gene.raw <- CreateSeuratObject(
-    counts = Read10X(data.dir = opts$gene_matrix),
+    counts = read_checked_matrix(opts$gene_matrix),
     min.cells = opts$min_cells,
     min.features = opts$min_features
   )
   
   cat("Loading transcript matrix from:", opts$transcript_matrix, "\n")
   sce.tr.raw <- CreateSeuratObject(
-    counts = Read10X(data.dir = opts$transcript_matrix),
+    counts = read_checked_matrix(opts$transcript_matrix),
     min.cells = opts$min_cells,
     min.features = opts$min_features
   )

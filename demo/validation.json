@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "validated_on": "2026-10-31",
+  "dataset_version": "v1.0.0",
+  "source": {
+    "series": "GSE178175",
+    "run": "SRR14808743",
+    "specimen": "FCtx1_ONT",
+    "selected_cells": 120,
+    "raw_read_records": 240000,
+    "filtered_read_records": 212659,
+    "groups": "Artificial technical split of one specimen, 60 selected cells per group"
+  },
+  "assets": {
+    "fastq": {
+      "filename": "scLRA-demo-fastq-v1.0.0.tar.gz",
+      "bytes": 283162174,
+      "sha256": "950b888b8b5de02466f2580ab47a61482a5a5816cdb96a4e13de51548092b770",
+      "url": "https://github.com/lishenglilab/scLRA-LLM/releases/download/demo-v1.0.0/scLRA-demo-fastq-v1.0.0.tar.gz"
+    },
+    "matrix": {
+      "filename": "scLRA-demo-matrix-v1.0.0.tar.gz",
+      "bytes": 32915730,
+      "sha256": "d1fb0f9b2331966bbff9ccff88090199affb31b206f8989313c6b6f29db72409",
+      "url": "https://github.com/lishenglilab/scLRA-LLM/releases/download/demo-v1.0.0/scLRA-demo-matrix-v1.0.0.tar.gz"
+    }
+  },
+  "environment": {
+    "alignment": {
+      "isoquant": "3.7.0",
+      "kaleido": "0.2.1",
+      "minimap2": "2.29",
+      "nanoget": "1.19.4",
+      "numpy": "1.24.4",
+      "pandas": "2.0.3",
+      "plotly": "6.5.0",
+      "pyfastx": "2.3.0",
+      "pysam": "0.22.1",
+      "python": "3.8.18",
+      "suppa": "2.3"
+    },
+    "preprocess": {
+      "blaze2": "2.4.0",
+      "kaleido": "0.2.1",
+      "nanofilt": "2.8.0",
+      "nanoget": "1.19.1",
+      "numpy": "1.21.5",
+      "openai": "1.39.0",
+      "pandas": "1.3.5",
+      "plotly": "5.18.0",
+      "pysam": "0.23.0",
+      "python": "3.7.16",
+      "base_installed_nanoplot": "1.45.0",
+      "nanoplot": "1.44.1",
+      "nanoplot_execution_override": "Official NanoPlot 1.44.1 source via PYTHONPATH"
+    },
+    "splicing": {
+      "numpy": "1.19.2",
+      "pandas": "1.1.5",
+      "python": "3.6.13",
+      "suppa": "2.3"
+    },
+    "fresh_preprocess": {
+      "blaze2": "2.4.0",
+      "kaleido": "0.2.1",
+      "nanofilt": "2.8.0",
+      "nanoget": "1.19.1",
+      "nanoplot": "1.44.1",
+      "numpy": "1.21.5",
+      "openai": "1.39.0",
+      "pandas": "1.3.5",
+      "plotly": "5.18.0",
+      "pysam": "0.23.0",
+      "python": "3.7.16"
+    },
+    "qc_python": {
+      "pysam": "0.22.0",
+      "openai": "2.14.0"
+    },
+    "R": {
+      "Seurat": "5.4.0",
+      "SeuratObject": "5.3.0",
+      "Matrix": "1.7.4",
+      "harmony": "1.2.4",
+      "scrubletR": "0.2.0",
+      "ggplot2": "4.0.1",
+      "dplyr": "1.1.4",
+      "IsoformSwitchAnalyzeR": "2.5.0",
+      "R": "4.4.0"
+    },
+    "nextflow": "25.10.2",
+    "environment_validation": "Full demos use installed analysis environments; preprocessing dependencies installed fresh and tested separately. Fresh installation of the remaining R/alignment/splicing stack not tested."
+  },
+  "execution_overrides": {
+    "threads": 8,
+    "Rscript": "R 4.4.0",
+    "nanoplot": "Official 1.44.1 source, with installed Python 3.7 dependencies",
+    "reference_database": "Existing IsoQuant 3.7 annotation database built from the recorded GENCODE v48 GTF"
+  },
+  "filter_parameters": {
+    "min_cells": 10,
+    "min_features": 200,
+    "semantics": "Native Seurat filtering order; no additional post-feature-filter cell gate"
+  },
+  "limits": [
+    "Fresh installation of the complete R/alignment/splicing stack not tested",
+    "LLM calls disabled; no provider validation in these demos",
+    "Replicate-based isoform-switch modelling disabled: one specimen has no biological replicates",
+    "Technical-group results are software checks, not biological findings",
+    "FASTQ final run resumes successful upstream tasks; upstream timings remain in the trace"
+  ],
+  "references": {
+    "GRCh38.primary_assembly.genome.fa": {
+      "sha256": "e49b92b3e4f321bf254c042f25b726d9931c4d74c7523e8b6bb530e63b0cfd4b"
+    },
+    "gencode.v48.annotation.gtf": {
+      "sha256": "94fac30910407d25e0a261b278a2fdce09e79f91d53e72dd3e56b21bc3ead557"
+    }
+  },
+  "demos": {
+    "fastq": {
+      "checks": {
+        "required_outputs": 13,
+        "AS_events": 679,
+        "selected_AS_events": 0,
+        "trace_tasks": 25,
+        "scope": "Software demo; artificial technical groups, not biological inference"
+      },
+      "objects": {
+        "gene": {
+          "features": 868,
+          "cells": 82,
+          "cells_by_sample": {
+            "DemoA": 40,
+            "DemoB": 42
+          },
+          "min_detected_features": 114,
+          "max_detected_features": 192,
+          "doublet_detection_performed": true
+        },
+        "transcript": {
+          "features": 745,
+          "cells": 82,
+          "cells_by_sample": {
+            "DemoA": 40,
+            "DemoB": 42
+          },
+          "min_detected_features": 91,
+          "max_detected_features": 165,
+          "doublet_detection_performed": null
+        }
+      },
+      "tasks": [
+        {
+          "name": "InputAndPreprocess:PARSE_METADATA (parse_metadata)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "1s",
+          "peak_rss": "3.4 MB"
+        },
+        {
+          "name": "IntegrativeAnalysis:CREATE_STAGE_MAPPING_FILE (stage_mapping)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "1s",
+          "peak_rss": "0"
+        },
+        {
+          "name": "InputAndPreprocess:BLAZE_RUN (DemoA)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "38.4s",
+          "peak_rss": "7.5 GB"
+        },
+        {
+          "name": "InputAndPreprocess:BLAZE_RUN (DemoB)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "37.8s",
+          "peak_rss": "7.5 GB"
+        },
+        {
+          "name": "InputAndPreprocess:FILTER_READS (DemoB)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "24.9s",
+          "peak_rss": "116.1 MB"
+        },
+        {
+          "name": "InputAndPreprocess:FILTER_READS (DemoA)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "25.3s",
+          "peak_rss": "116.5 MB"
+        },
+        {
+          "name": "AlignmentAndTranscriptReconstruction:MAKE_READ_GROUPS (read_groups)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "4.6s",
+          "peak_rss": "14.3 MB"
+        },
+        {
+          "name": "InputAndPreprocess:NANOPLOT_QC (NANOPLOT_QC)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "13.1s",
+          "peak_rss": "396.8 MB"
+        },
+        {
+          "name": "AlignmentAndTranscriptReconstruction:ISOQUANT_SC (isoquant_sc)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "1h 21m 45s",
+          "peak_rss": "18.5 GB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:PREPARE_TRANSCRIPT_MATRIX (prepare_transcript_matrix)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "946ms",
+          "peak_rss": "0"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:PREPARE_GENE_MATRIX (prepare_gene_matrix)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "910ms",
+          "peak_rss": "0"
+        },
+        {
+          "name": "AlignmentAndTranscriptReconstruction:EXTRACT_TRANSCRIPTS (extract_transcripts)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "17.1s",
+          "peak_rss": "499.6 MB"
+        },
+        {
+          "name": "AlternativeSplicing:GENERATE_AS_EVENTS (events)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "3.5s",
+          "peak_rss": "170.2 MB"
+        },
+        {
+          "name": "AlignmentAndTranscriptReconstruction:ORF_CALL (orf_call)",
+          "status": "CACHED",
+          "exit": "0",
+          "duration": "4m 56s",
+          "peak_rss": "305.9 MB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:RUN_SC_ANALYSIS (sc_analysis)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "35.7s",
+          "peak_rss": "649.2 MB"
+        },
+        {
+          "name": "AlternativeSplicing:SPLIT_EXPRESSION (split)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "8.5s",
+          "peak_rss": "396.7 MB"
+        },
+        {
+          "name": "AlternativeSplicing:CALCULATE_PSI (part_1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "1.9s",
+          "peak_rss": "18.4 MB"
+        },
+        {
+          "name": "AlternativeSplicing:MERGE_AS_RESULTS (merge_psi)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "1.4s",
+          "peak_rss": "35 MB"
+        },
+        {
+          "name": "AlternativeSplicing:ASE_DIFFERENTIAL (TechnicalA_vs_TechnicalB)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "2.2s",
+          "peak_rss": "36.9 MB"
+        },
+        {
+          "name": "AlternativeSplicing:ASE_ANALYSIS (ase_analysis)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "8.9s",
+          "peak_rss": "435.9 MB"
+        },
+        {
+          "name": "AlternativeSplicing:DOMINANT_ISOFORM_DETECTION (dominant_isoform)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "24.4s",
+          "peak_rss": "1.2 GB"
+        },
+        {
+          "name": "IntegrativeAnalysis:ORF_CLUSTER (orf_cluster)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "33.6s",
+          "peak_rss": "1.2 GB"
+        },
+        {
+          "name": "IntegrativeAnalysis:DIFFERENTIAL_ANALYSIS (TechnicalA_vs_TechnicalB)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "24.1s",
+          "peak_rss": "3.7 GB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:EXTRACT_SC_QC (filtered_cell_qc)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "49s",
+          "peak_rss": "504.9 MB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:RENDER_SC_QC_REPORT (render_sc_qc_report)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "987ms",
+          "peak_rss": "19.5 MB"
+        }
+      ]
+    },
+    "matrix": {
+      "checks": {
+        "required_outputs": 13,
+        "AS_events": 679,
+        "selected_AS_events": 0,
+        "trace_tasks": 15,
+        "scope": "Software demo; artificial technical groups, not biological inference"
+      },
+      "objects": {
+        "gene": {
+          "features": 868,
+          "cells": 82,
+          "cells_by_sample": {
+            "DemoA": 40,
+            "DemoB": 42
+          },
+          "min_detected_features": 114,
+          "max_detected_features": 192,
+          "doublet_detection_performed": true
+        },
+        "transcript": {
+          "features": 745,
+          "cells": 82,
+          "cells_by_sample": {
+            "DemoA": 40,
+            "DemoB": 42
+          },
+          "min_detected_features": 91,
+          "max_detected_features": 165,
+          "doublet_detection_performed": null
+        }
+      },
+      "tasks": [
+        {
+          "name": "PreliminarySingleCellAnalysis:PREPARE_TRANSCRIPT_MATRIX (prepare_transcript_matrix)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "4.4s",
+          "peak_rss": "0"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:PREPARE_GENE_MATRIX (prepare_gene_matrix)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "4.5s",
+          "peak_rss": "0"
+        },
+        {
+          "name": "IntegrativeAnalysis:CREATE_STAGE_MAPPING_FILE (stage_mapping)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "4.4s",
+          "peak_rss": "0"
+        },
+        {
+          "name": "AlternativeSplicing:GENERATE_AS_EVENTS (events)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "6.9s",
+          "peak_rss": "170 MB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:RUN_SC_ANALYSIS (sc_analysis)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "20s",
+          "peak_rss": "648.4 MB"
+        },
+        {
+          "name": "AlternativeSplicing:SPLIT_EXPRESSION (split)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "5.9s",
+          "peak_rss": "390.7 MB"
+        },
+        {
+          "name": "AlternativeSplicing:CALCULATE_PSI (part_1)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "2s",
+          "peak_rss": "13.2 MB"
+        },
+        {
+          "name": "AlternativeSplicing:MERGE_AS_RESULTS (merge_psi)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "1.3s",
+          "peak_rss": "38.1 MB"
+        },
+        {
+          "name": "AlternativeSplicing:ASE_DIFFERENTIAL (TechnicalA_vs_TechnicalB)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "2.1s",
+          "peak_rss": "34.7 MB"
+        },
+        {
+          "name": "AlternativeSplicing:ASE_ANALYSIS (ase_analysis)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "9.4s",
+          "peak_rss": "435.7 MB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:EXTRACT_SC_QC (filtered_cell_qc)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "21.5s",
+          "peak_rss": "504 MB"
+        },
+        {
+          "name": "AlternativeSplicing:DOMINANT_ISOFORM_DETECTION (dominant_isoform)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "22.2s",
+          "peak_rss": "1.3 GB"
+        },
+        {
+          "name": "PreliminarySingleCellAnalysis:RENDER_SC_QC_REPORT (render_sc_qc_report)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "991ms",
+          "peak_rss": "18.7 MB"
+        },
+        {
+          "name": "IntegrativeAnalysis:ORF_CLUSTER (orf_cluster)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "32.3s",
+          "peak_rss": "1.2 GB"
+        },
+        {
+          "name": "IntegrativeAnalysis:DIFFERENTIAL_ANALYSIS (TechnicalA_vs_TechnicalB)",
+          "status": "COMPLETED",
+          "exit": "0",
+          "duration": "22.5s",
+          "peak_rss": "1.3 GB"
+        }
+      ]
+    }
+  },
+  "paired_counts_check": [
+    {
+      "kind": "gene",
+      "same_ordered_features": true,
+      "same_ordered_cells": true,
+      "common_features": 868,
+      "common_cells": 82,
+      "common_raw_counts_exactly_equal": true
+    },
+    {
+      "kind": "tr",
+      "same_ordered_features": true,
+      "same_ordered_cells": true,
+      "common_features": 745,
+      "common_cells": 82,
+      "common_raw_counts_exactly_equal": true
+    }
+  ],
+  "matrix_input_checks": {
+    "unfiltered_count_files_exact_from_FASTQ_task": true,
+    "bundled_ORF_exact_from_FASTQ_task": true,
+    "external_genome_and_metadata_paths_absent_in_matrix_test": true
+  },
+  "fresh_preprocessing_check": {
+    "status": "passed",
+    "tasks": 6,
+    "pip_check": "No broken requirements found",
+    "installation": "envs/preprocess.yml dependencies; a temporary nodefaults channel entry excluded unreachable server-specific extra channels",
+    "nanoplot": "Installed 1.44.1, PYTHONPATH source override removed for this check",
+    "scope": "Both FASTQs through metadata parsing, BLAZE, NanoFilt and NanoPlot; full R/alignment/splicing environments not freshly installed"
+  },
+  "regressions": {
+    "python_unittest": {
+      "tests": 22,
+      "status": "passed"
+    },
+    "R_splicing_numerical_checks": "passed",
+    "R_dominance_CLI_checks": "passed",
+    "nextflow_lint": "7 files passed",
+    "fastq_profile_preview": "passed",
+    "released_fastq_canonical_integrity": "Both 120000-record subsets passed"
+  },
+  "source_hash_convention": "SHA256 after CRLF-to-LF normalization, matching Git text blobs",
+  "tested_source_sha256": {
+    "bin/AlternativeSplicing/AsEventAnalysis.R": "c3faf44a55232cb430709c786e26475ea6fa9424d137668e090f23e574a30444",
+    "bin/AlternativeSplicing/ase_statistics.R": "a1a07726d36fae6e02b562d874a657bfead5d808904ddf2558a559bce47370f7",
+    "bin/AlternativeSplicing/count_helpers.R": "743907c64173ec3e5501b6cb385cc486c246f2eca3f0415f362a03c6097084c9",
+    "bin/AlternativeSplicing/dominant_isoform_detection.R": "47aedd91786d58d9cfe3efa5efcded1874c2070cab43c31425f402850ab56dcd",
+    "bin/AlternativeSplicing/isoform_switch_consequences.R": "41ecaa7510d6048f6e09b980d35393f2da676723e8915e019ac89b4651d9a5fa",
+    "bin/AlternativeSplicing/isoform_switch_preparation.R": "5ec739fc4e61ee476ec5a4230fdc511e5e412966904f1648e030c156238238c2",
+    "bin/AlternativeSplicing/merge_psi.R": "4ca15367f6a41bc5de0d39cc9aaac3f94f3d9cc92de43e264b633861b2418323",
+    "bin/AlternativeSplicing/split_expression.R": "990e518837ecfb2dc0a3cc54598c6f23201773c9ca0db01721c3645d358605c8",
+    "bin/IntegrativeAnalysis/differential_analysis.R": "e7fe87fb868778ede98526681c27c81cb971ec4c62a08c2183b3ff0c89558112",
+    "bin/IntegrativeAnalysis/orf_cluster.R": "7217773c89cf1a47d16e198081fcaf89b53b916635799324ebffeaed23d5e959",
+    "bin/ORF_generate.py": "77074997c63aad2a003e44f8beee8f606584f7cf621fc22067c57f3488d124b2",
+    "bin/deepseek/assembly_qc_deepseek.py": "83bf6326cc9c4110ca9ae0b31ee57123d33ebf2c26fbc112dd353435e2de412d",
+    "bin/deepseek/cell_ann_deekseek.py": "9a4a4482e42c627e3ce302911a408843f0e6b334fd45b855cab8dfb8f0e4ce8a",
+    "bin/deepseek/cell_qc_deekseek.py": "daae99b0ace456fad80dcf820387eabd9ff2f883328f65359460aa3f45691a21",
+    "bin/deepseek/differential_interpretation.py": "9b166f5a9401a41847fd082472784b3a0b7a1ef4ea45711e2c5a81108a5537a1",
+    "bin/deepseek/isoform_switch_interpretation.py": "d8789f8e6a5a68c48b751e666a6794c8a0ebc4a3812fd0bf435e62585aecf550",
+    "bin/deepseek/read_qc_deekseek.py": "a5998c406a3b07c29c35091ae461605cd7aaf0d13a8cb00ab5d6f860b799c5da",
+    "bin/llm/__init__.py": "3047198fa2a990b5f4e6e866d1fce7516a3fb4a28bdebbc71d4699a2e66b68be",
+    "bin/llm/_runner.py": "4f6ed31ee4bd65da1d056b6e1f72eb0b4c02dbd029c698d5cea868835767bd02",
+    "bin/llm/assembly_qc.py": "9c53313bff5838a540efd360b0da6d1efb99833b42a8ca8b8fc1b1ed12c5e4fe",
+    "bin/llm/cell_annotation.py": "9bd199256dc1fa935cf2dfa9f34245a77b5bc6a760d01c4d60ea62079a1cf57e",
+    "bin/llm/cell_qc.py": "c9ce1730cd91b3bc8c1161635b4521afbdd8125f628379c48986d6e9dc35ba09",
+    "bin/llm/client.py": "68b1e175ebf514fbb9bc2a6ac1fe6773e99bf6374a39f224599f62da957d3e0f",
+    "bin/llm/differential_interpretation.py": "a0830dced69f5826ab07d73646c115d1773ab282c1b9804bd066a90efade90c4",
+    "bin/llm/isoform_switch_interpretation.py": "287531a6bfd970d30e10a5a96595ffd61ce379f38c8010460602d460db63a3cd",
+    "bin/llm/prompts/cell_annotation.txt": "f47170a8ed66b0eb8e5fa1a79d68b395ce51eb1298121bc5b167b073328786d7",
+    "bin/llm/read_qc.py": "860787d57c60d8588ad7ddc4f7f96bf9a11fe225e0d9d8ad82c8ca3694f70d0f",
+    "bin/make_read_groups.py": "e73812ce6c6ed599e9615e1024744e8bd51d61e0d4ae4b1f8eec6704772af879",
+    "bin/parse_metadata.py": "91a75745e1417b6981916f8e92f8c971b54e325c8634c5b4420633ab7d5e6bc2",
+    "bin/preliminary_single_cell_analysis.R": "caf45db5fe697ab232d294cd19d11c9e0fea65fc6566057392ae95b39191be4d",
+    "bin/qc/extract_qc_metrics.R": "f879d6d4c94c1d388695bf8c14aaca4592da15cf5264ea9b989012fe4cdc4606",
+    "bin/qc/interpret_qc.py": "77adf491aff50b60f8d0300a85560a032d62b4c9a7d8bbddb4d35e0c977dd0bd",
+    "bin/qc/plot_qc.R": "2b5f1026dd7cb0ce546fc574152eb8a224617f479efae79617382749eca62045",
+    "bin/qc/prepare_qc_report.py": "c11cf67210893e0e551c518df9edcfdda189da709752e1f60d544165de33153f",
+    "bin/qc/publish_qc_report.py": "b6e0384e56fb3e8e56730c045f3ee7a5874c1d8b4d7ba993510c9c545cef7be9",
+    "bin/qc/render_qc_report.py": "2c275089c977fa9d617dfe4c07b6b2ab0bbec222de1cd922013e4b4954300a17",
+    "bin/qc/report_template.html": "c703d51e705582c29be2cc23b238bbd1bd597226f45d2c951390c71558088cde",
+    "conf/demo_common.config": "26127d617ea2a9c7ec380d2061c3499cd7136dbaf8aebda3e0f0c1b1bc836cc2",
+    "conf/demo_fastq.config": "967507eb0bff55f1bfad8a72a7609976210061d7b2b04f51f2c24514b5a1f4ef",
+    "conf/demo_matrix.config": "5a862187cb37d70698d3413509e2afbb0124bde0b5691b81d3855141d538bf28",
+    "envs/alternativesplicing.yml": "bf3ddfd0a7c2fbcd325bc1a7c11fc5acc73d74f3388ef502d20a7a8ff93a1119",
+    "envs/preprocess.yml": "a15000e7436e08eb63a9d6d29deeda16dc354b7090fff26f98d9b75c4539b897",
+    "envs/qc.yml": "5b3bb135c64ee0ee68ca832bb2bfc50ecf6ea581db8748a6834d872ceda39e55",
+    "envs/sclong.yml": "dd631b7942006a9ae3fd7c94ba2418a08b3a3099f08ca2be16c13c783112ce22",
+    "main.nf": "b5b4ed3fbfe3882f3ba93f32990eb7d0bf9ba0f021db2b78bf535f797b34bf26",
+    "modules/AlignmentAndTranscriptReconstruction.nf": "4eb4c0ab58b85db3940b270ba0961ebcbeb987ddd021a89e00e2dd4c644e84ef",
+    "modules/AlternativeSplicing.nf": "bfd009322570db2ec19782399a2ba013e00975ca4b65b70a4aae52cac56ddf8a",
+    "modules/InputAndPreprocess.nf": "2c78e110d79c9b466f31f422f1d6c163b2353cc24bb2299813ffb56a07780c44",
+    "modules/IntegrativeAnalysis.nf": "63a21e6e1d66a8a39efa8cbe9b574c648a138f1a497442296e53bc14a2110c9c",
+    "modules/PreliminarySingleCellAnalysis.nf": "641d95f19c1dd7b6f9656066e08904cfcce4ab63a772efdd1ccedddc68425984",
+    "nextflow.config": "7482eb3faad83337cb2644ad403dd6b29151f8c074c5fa9d9c5814f5dd9077fb"
+  }
+}

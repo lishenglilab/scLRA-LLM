@@ -216,9 +216,13 @@ workflow AlignmentAndTranscriptReconstruction {
   main:
     pipeline_bin = file("${projectDir}/bin", checkIfExists: true)
 
-    // Collect sample IDs and fastq files separately for MAKE_READ_GROUPS
-    sample_ids = filtered_fastq.map { sid, _fq -> sid }.collect()
-    hq_fastqs  = filtered_fastq.map { _sid, fq -> fq }.collect()
+    // Keep paired sample/files together, independent of upstream task completion.
+    // A stable descending sample-ID order also keeps cache inputs reproducible.
+    ordered_samples = filtered_fastq.toList().map { rows ->
+      rows.sort { left, right -> right[0].toString() <=> left[0].toString() }
+    }
+    sample_ids = ordered_samples.map { rows -> rows.collect { row -> row[0] } }
+    hq_fastqs = ordered_samples.map { rows -> rows.collect { row -> row[1] } }
 
     // Create read groups file
     rg = MAKE_READ_GROUPS(sample_ids, hq_fastqs, pipeline_bin)

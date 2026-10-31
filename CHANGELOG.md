@@ -1,5 +1,22 @@
 # Changes
 
+## Compact demos, 2026-10-31
+
+- Add a matrix entry point that starts from matched, unfiltered IsoQuant gene/transcript
+  counts and runs the existing downstream analysis processes.
+- Provide versioned matrix and cell-focused FASTQ downloads, SHA256 verification,
+  source provenance, reconstruction utilities and output validation commands.
+- Add demo profiles with normal Seurat filtering and clustering settings, disabled
+  LLM calls and explicitly artificial technical groups from one public specimen.
+  Replicate-based isoform-switch modelling is disabled in these profiles.
+- Keep sample IDs paired with their FASTQs when upstream tasks finish in different orders.
+- Avoid Python bytecode writes in the staged source directory to keep cache inputs stable.
+- Report a clear error when sparse input has no cells passing the configured filters.
+- Allow matrix inputs to provide matched ORF sequences from the FASTQ run, while retaining
+  ORF prediction as a fallback when `ORF.fa` is absent.
+- Pin NanoPlot to 1.44.1 and allow interactive-only output with `nanoplot_static=false`
+  to avoid static-export browser requirements in demo runs.
+
 ## Pipeline update, 2026-10-30
 
 - Build SUPPA inputs from linear RNA count-based per-million abundance, before splitting cells;
