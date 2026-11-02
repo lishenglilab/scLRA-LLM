@@ -1,5 +1,16 @@
 # Changes
 
+## 1.0.0 — 2026-11-02
+
+First versioned software release, collecting the pipeline, compact demos and study
+QC report updates below. Declare the software version in Nextflow's `manifest` and
+document the `v1.0.0` checkout for reproducible runs. The separate `demo-v1.0.0`
+Release continues to version the example data; its files and checksums are unchanged.
+
+This release adds version metadata and documentation to the validated workflow.
+Full demo execution evidence and its environment limits remain recorded in
+[`demo/validation.json`](demo/validation.json).
+
 ## Study QC report, 2026-11-02
 
 - Publish the original standalone HTML QC report and complete TSV from six study
