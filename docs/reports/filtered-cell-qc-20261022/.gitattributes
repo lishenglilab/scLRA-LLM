@@ -1,0 +1,3 @@
+# Preserve the original report artifact bytes, including on Windows checkouts.
+scLRA_LLM_QC_report.html -text
+scLRA_LLM_QC_report.tsv -text

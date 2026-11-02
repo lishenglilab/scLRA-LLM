@@ -175,6 +175,9 @@ Each module publishes its reports, tables, plots and reusable objects below its 
 
 ### Filtered-cell QC report
 
+For a completed report from the study's six samples (53,489 retained cells), see the
+[study QC report and HTML download](docs/reports/filtered-cell-qc-20261022/README.md).
+
 The concise English report is generated automatically from the final filtered `sce.gene.rds` and `sce.tr.rds` objects in this run:
 
 ```text

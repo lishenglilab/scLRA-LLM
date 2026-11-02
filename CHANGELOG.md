@@ -1,5 +1,12 @@
 # Changes
 
+## Study QC report, 2026-11-02
+
+- Publish the original standalone HTML QC report and complete TSV from six study
+  samples (53,489 filtered cells), with file hashes and a report index under `docs/reports/`.
+- Link the dated study-report snapshot from the main QC documentation; the numerical
+  content and assessments are preserved from the original report.
+
 ## Compact demos, 2026-10-31
 
 - Add a matrix entry point that starts from matched, unfiltered IsoQuant gene/transcript
