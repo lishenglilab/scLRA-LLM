@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "report_date": "2026-10-22",
+  "published_on": "2026-11-02",
+  "origin": "Original approved study filtered-cell QC report",
+  "scope": "Dated study-report snapshot; not a new execution of the current pipeline or the public-data demos",
+  "cohort": {
+    "samples": [
+      "AD1",
+      "AD2",
+      "AD3",
+      "N1",
+      "N2",
+      "N3"
+    ],
+    "paired_donors": 3,
+    "retained_cells": 53489,
+    "bam_derived_read_ids": 492206930
+  },
+  "files": {
+    "scLRA_LLM_QC_report.html": {
+      "bytes": 803404,
+      "sha256": "8ed7535d7f6de2fdec244ec55dacf7626ee99b424f08a213611a9c7b4eff7822"
+    },
+    "scLRA_LLM_QC_report.tsv": {
+      "bytes": 4031,
+      "sha256": "94d1f4f63fe87d2f1abc357a9923da6c7b2c366aced8dec74e367af9f98eed92"
+    }
+  },
+  "publication_checks": {
+    "original_artifact_bytes_preserved": true,
+    "embedded_data_matches_all_252_TSV_fields": true,
+    "self_contained_HTML_no_external_resources": true,
+    "embedded_distribution_SVG_present": true,
+    "no_internal_paths_or_credential_markers": true,
+    "unique_HTML_ids_and_valid_fragment_links": true
+  }
+}
