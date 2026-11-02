@@ -1,5 +1,7 @@
 # scLRA-LLM
 
+**Software version: 1.0.0** · [Release notes and source](https://github.com/lishenglilab/scLRA-LLM/releases/tag/v1.0.0)
+
 scLRA-LLM is a Nextflow DSL2 pipeline for single-cell long-read RNA-seq analysis. It connects read preprocessing, IsoQuant transcript reconstruction, gene- and transcript-level single-cell analysis, alternative-splicing analysis, ORF analysis, and optional LLM-assisted reporting in one workflow.
 
 LLM steps use an OpenAI-compatible Chat Completions endpoint and are not tied to a specific provider. All biological analysis steps can run with LLM support disabled.
@@ -35,10 +37,16 @@ The pipeline provides Conda YAML files for its Python and command-line dependenc
 ```bash
 git clone https://github.com/lishenglilab/scLRA-LLM.git
 cd scLRA-LLM
+git checkout v1.0.0
 unzip assets/3M-february-2018.zip -d assets
 ```
 
 The archive contains the 10x 3M barcode whitelist referenced by the default configuration. If a different chemistry or whitelist is used, update `params.whitelist` instead. No API credentials are required when LLM support is disabled.
+
+The `v1.0.0` tag identifies the software release. The separate `demo-v1.0.0` tag
+versions the downloadable example inputs. Record both versions when reproducing a demo.
+Software versions use `MAJOR.MINOR.PATCH`: patches fix problems, minor releases add
+compatible functionality, and major releases introduce incompatible changes.
 
 ## Demos
 
